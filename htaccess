@@ -1,0 +1,32 @@
+# ============================================================
+# .htaccess — Keamanan & Konfigurasi
+# ============================================================
+
+Options -Indexes
+ServerSignature Off
+
+# ── Security Headers ──
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ── Blokir akses langsung ke file sensitif ──
+<FilesMatch "(config\.php|auth\.php|generate_hash\.php|test_debug\.php|\.env|database\.sql)$">
+  Order Allow,Deny
+  Deny from all
+</FilesMatch>
+
+# ── Larang PHP dieksekusi di folder uploads ──
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^uploads/(.+)\.(php|php5|phtml|phar)$ - [F,L]
+</IfModule>
+
+# ── File ini sendiri tidak bisa diakses ──
+<Files .htaccess>
+  Order Allow,Deny
+  Deny from all
+</Files>

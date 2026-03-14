@@ -5,9 +5,9 @@
 // ============================================================
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'batt8713_bataktobaterkini');   // <-- ganti ini
-define('DB_USER', 'batt8713');   // <-- ganti ini
-define('DB_PASS', ''); // <-- ganti ini
+define('DB_NAME', 'nama_database_anda');   // <-- ganti ini
+define('DB_USER', 'user_database_anda');   // <-- ganti ini
+define('DB_PASS', 'password_database_anda'); // <-- ganti ini
 define('DB_CHARSET', 'utf8mb4');
 
 // Upload path
@@ -62,7 +62,7 @@ function generateSlug(string $title, int $id = 0): string {
 // ============================================================
 // Helper: upload gambar dengan validasi ketat
 // ============================================================
-function uploadImage(array $file, string $prefix = 'img'): string|false {
+function uploadImage(array $file, string $prefix = 'img') {
     if ($file['error'] !== UPLOAD_ERR_OK) return false;
     if ($file['size'] > MAX_FILE_SIZE) return false;
 
@@ -71,13 +71,11 @@ function uploadImage(array $file, string $prefix = 'img'): string|false {
     $mimeType = $finfo->file($file['tmp_name']);
     if (!in_array($mimeType, ALLOWED_IMAGE_TYPES, true)) return false;
 
-    $ext = match($mimeType) {
-        'image/jpeg' => 'jpg',
-        'image/png'  => 'png',
-        'image/webp' => 'webp',
-        'image/gif'  => 'gif',
-        default      => false,
-    };
+    if ($mimeType === 'image/jpeg')      { $ext = 'jpg'; }
+    elseif ($mimeType === 'image/png')  { $ext = 'png'; }
+    elseif ($mimeType === 'image/webp') { $ext = 'webp'; }
+    elseif ($mimeType === 'image/gif')  { $ext = 'gif'; }
+    else                                { $ext = false; }
     if (!$ext) return false;
 
     if (!is_dir(UPLOAD_DIR)) {

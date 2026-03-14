@@ -20,10 +20,12 @@ if (!empty($_SESSION['loggedin'])) {
 }
 
 // ── Kredensial penulis (tersimpan di backend, TIDAK di database) ──
-// Untuk mengganti password: ubah AUTHOR_PASSWORD, hapus credentials.php,
-// upload ulang — hash baru akan di-generate otomatis.
-const AUTHOR_USERNAME = 'tansiswo@siagian';
-define('CACHED_PASS_HASH', '$2y$12$LL239/tn/O8lUm3di04sROJelGxHWYeCexm.dln6FNKjZ3fRKe5j.');
+// Username dan bcrypt hash password langsung di sini.
+// Untuk mengganti password, generate hash baru via SSH hosting:
+//   php -r "echo password_hash('PASSWORD_BARU', PASSWORD_BCRYPT, ['cost'=>12]);"
+// Lalu ganti nilai AUTHOR_PASS_HASH di bawah.
+const AUTHOR_USERNAME  = 'tansiswo@siagian';
+const AUTHOR_PASS_HASH = '$2y$12$LL239/tn/O8lUm3di04sROJelGxHWYeCexm.dln6FNKjZ3fRKe5j.';
 
 // ── Rate limiting via session ──
 if (!isset($_SESSION['login_attempts'])) {
@@ -54,8 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isLocked) {
 
         // Timing-safe: selalu jalankan password_verify agar response time konsisten
         $userOk = hash_equals(AUTHOR_USERNAME, $username);
-        $passOk = password_verify($password, CACHED_PASS_HASH);
-        if (!$userOk) password_verify('dummy_constant_time', CACHED_PASS_HASH);
+        $passOk = password_verify($password, AUTHOR_PASS_HASH);
+        if (!$userOk) password_verify('dummy_constant_time', AUTHOR_PASS_HASH);
 
         if ($userOk && $passOk) {
             session_regenerate_id(true);
@@ -223,7 +225,7 @@ $csrfToken = $_SESSION['csrf_token'];
           <input type="password" id="password" name="password" class="form-control"
                  placeholder="••••••••••" required autocomplete="current-password">
           <button type="button" class="toggle-pw" id="togglePw" aria-label="Tampilkan password">
-            <svg id="eyeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
             </svg>
           </button>
@@ -268,7 +270,6 @@ $csrfToken = $_SESSION['csrf_token'];
 <?php endif; ?>
 
 <script>
-// Toggle show/hide password
 (function() {
   const btn   = document.getElementById('togglePw');
   const input = document.getElementById('password');
@@ -277,8 +278,8 @@ $csrfToken = $_SESSION['csrf_token'];
   const iconHide = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
   btn.addEventListener('click', () => {
     const show = input.type === 'password';
-    input.type     = show ? 'text' : 'password';
-    btn.innerHTML  = show ? iconHide : iconShow;
+    input.type    = show ? 'text' : 'password';
+    btn.innerHTML = show ? iconHide : iconShow;
     btn.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
   });
 })();
