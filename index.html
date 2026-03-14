@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Katalog Buku M. Tansiswo Siagian</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-secondary: #161b22;
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --accent: #d4a853;
+      --accent-dim: #a88a3d;
+      --card: #1c2128;
+      --border: #30363d;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .font-display { font-family: 'Cormorant Garamond', serif; }
+
+    .noise-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 1000; opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    .nav-link {
+      position: relative; color: var(--muted); transition: color 0.3s ease;
+    }
+    .nav-link::after {
+      content: ''; position: absolute; bottom: -4px; left: 0;
+      width: 0; height: 2px; background: var(--accent); transition: width 0.3s ease;
+    }
+    .nav-link:hover, .nav-link.active { color: var(--fg); }
+    .nav-link:hover::after, .nav-link.active::after { width: 100%; }
+
+    .particle { position: absolute; border-radius: 50%; pointer-events: none; }
+
+    .hero-gradient {
+      background: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212, 168, 83, 0.15), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 60%, rgba(212, 168, 83, 0.08), transparent),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-secondary) 100%);
+    }
+
+    /* ===== BOOK CARD ===== */
+    .book-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1),
+                  box-shadow 0.4s ease,
+                  opacity 0.4s ease,
+                  filter 0.4s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .book-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 24px 48px -12px rgba(0,0,0,0.5), 0 0 0 1px var(--accent-dim);
+    }
+
+    /* Dim non-expanded cards when one is expanded */
+    .grid-has-expanded .book-card:not(.card-is-expanded) {
+      opacity: 0.3;
+      filter: blur(2px);
+      transform: scale(0.97);
+      pointer-events: none;
+    }
+
+    .book-cover {
+      position: relative;
+      height: 224px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .book-cover::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%);
+      pointer-events: none; z-index: 2;
+    }
+
+    .book-spine {
+      position: absolute; left: 0; top: 0; width: 14px; height: 100%;
+      background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15), transparent);
+      z-index: 3;
+    }
+
+    .book-cover-img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+
+    .book-cover-fallback {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0.75rem; padding: 1.5rem; text-align: center; z-index: 1;
+    }
+
+    .book-year-badge {
+      position: absolute; bottom: 12px; right: 12px;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
+      padding: 4px 10px; border-radius: 6px; font-size: 0.75rem;
+      color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.1); z-index: 4;
+    }
+
+    .book-genre-badge {
+      position: absolute; top: 12px; left: 18px;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
+      padding: 4px 10px; border-radius: 9999px; font-size: 0.7rem;
+      color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.1);
+      text-transform: capitalize; z-index: 4;
+    }
+
+    /* Card body */
+    .card-body {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    /* Synopsis hidden by default */
+    .synopsis-text {
+      color: var(--muted);
+      font-size: 0.875rem;
+      line-height: 1.7;
+      display: none;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Expand button */
+    .expand-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--accent);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .expand-btn:hover {
+      border-color: var(--accent);
+      background: rgba(212, 168, 83, 0.1);
+    }
+
+    .expand-btn .chevron {
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .expand-btn.is-open .chevron {
+      transform: rotate(180deg);
+    }
+
+    /* Buy button */
+    .buy-btn {
+      background: var(--accent); color: var(--bg);
+      padding: 0.5rem 1.25rem; border-radius: 9999px;
+      font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      border: none; transition: all 0.3s ease;
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      text-decoration: none; font-family: 'DM Sans', sans-serif;
+    }
+    .buy-btn:hover { background: var(--accent-dim); transform: translateY(-2px); }
+    .buy-btn.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+    /* ===== MODAL OVERLAY ===== */
+    #modalOverlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(5px);
+      z-index: 900;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    #modalOverlay.active {
+      display: flex;
+    }
+
+    /* ===== MODAL CARD ===== */
+    #modalCard {
+      background: var(--card);
+      border: 1px solid var(--accent);
+      border-radius: 1rem;
+      box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8), 0 0 0 1px var(--accent);
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow: hidden;
+      position: relative;
+      animation: modalIn 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.93) translateY(20px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    #modalCover {
+      width: 260px;
+      min-width: 260px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    #modalCover .book-spine { height: 100%; }
+
+    #modalBody {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    #modalClose {
+      position: absolute;
+      top: 12px; right: 12px;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.25s ease;
+      z-index: 10;
+      font-family: 'DM Sans', sans-serif;
+    }
+    #modalClose:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+    @media (max-width: 640px) {
+      #modalCard { flex-direction: column; max-height: 92vh; }
+      #modalCover { width: 100%; min-width: unset; height: 180px; }
+      #modalBody { padding: 1.25rem; }
+    }
+
+    /* Filter button */
+    .filter-btn {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); padding: 0.5rem 1.25rem;
+      border-radius: 9999px; transition: all 0.3s ease; cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .filter-btn:hover { border-color: var(--accent-dim); color: var(--fg); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+    /* Timeline */
+    .timeline-item { position: relative; }
+    .timeline-item::before {
+      content: ''; position: absolute; left: 0; top: 8px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 20px var(--accent);
+    }
+    .timeline-item::after {
+      content: ''; position: absolute; left: 5px; top: 24px;
+      width: 2px; height: calc(100% - 8px); background: var(--border);
+    }
+    .timeline-item:last-child::after { display: none; }
+
+    .social-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); transition: all 0.3s ease;
+    }
+    .social-icon:hover {
+      background: var(--accent); border-color: var(--accent);
+      color: var(--bg); transform: translateY(-4px);
+    }
+
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease, transform 0.8s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    .hamburger { display: flex; flex-direction: column; gap: 5px; cursor: pointer; padding: 8px; background: none; border: none; }
+    .hamburger span { display: block; width: 24px; height: 2px; background: var(--fg); transition: all 0.3s ease; }
+    .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+    .hamburger.active span:nth-child(2) { opacity: 0; }
+    .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+    .mobile-menu {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+      background: var(--bg); z-index: 40;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2rem; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    .mobile-menu.active { opacity: 1; visibility: visible; }
+    .mobile-menu a { font-size: 2rem; font-family: 'Cormorant Garamond', serif; color: var(--fg); text-decoration: none; transition: color 0.3s ease; }
+    .mobile-menu a:hover { color: var(--accent); }
+
+    .quote-mark { font-size: 8rem; line-height: 1; color: var(--accent); opacity: 0.2; font-family: 'Cormorant Garamond', serif; }
+
+    .stagger-item { opacity: 0; transform: translateY(40px); }
+    .stagger-item.animate { animation: staggerIn 0.6s ease forwards; }
+    @keyframes staggerIn { to { opacity: 1; transform: translateY(0); } }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+
+    .scroll-indicator { animation: bounce 2s infinite; }
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-8px); }
+      60% { transform: translateY(-4px); }
+    }
+
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="noise-overlay"></div>
+
+  <!-- ===== MODAL (Baca Selengkapnya) ===== -->
+  <div id="modalOverlay">
+    <div id="modalCard">
+      <button id="modalClose" aria-label="Tutup">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <!-- Cover -->
+      <div id="modalCover">
+        <div class="book-spine"></div>
+        <div id="modalCoverInner" style="width:100%;height:100%;"></div>
+        <span id="modalYearBadge" class="book-year-badge"></span>
+        <span id="modalGenreBadge" class="book-genre-badge"></span>
+      </div>
+
+      <!-- Body -->
+      <div id="modalBody">
+        <div>
+          <p id="modalGenreLabel" style="font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);margin-bottom:0.5rem;"></p>
+          <h2 id="modalTitle" class="font-display" style="font-size:1.75rem;font-weight:700;line-height:1.2;margin-bottom:1rem;"></h2>
+        </div>
+        <p id="modalSynopsis" style="color:var(--muted);font-size:0.9rem;line-height:1.75;flex:1;"></p>
+        <div style="padding-top:1rem;border-top:1px solid var(--border);display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <a id="modalBuyBtn" class="buy-btn" target="_blank" rel="noopener noreferrer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            Beli Buku
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="fixed top-0 left-0 w-full z-50 transition-all duration-300" id="navbar">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="#beranda" class="font-display text-2xl font-bold text-[var(--accent)]">M. TS</a>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#beranda" class="nav-link active">Beranda</a>
+        <a href="#buku" class="nav-link">Buku</a>
+        <a href="#tentang" class="nav-link">Tentang Saya</a>
+      </div>
+      <button class="hamburger md:hidden" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#beranda">Beranda</a>
+    <a href="#buku">Buku</a>
+    <a href="#tentang">Tentang Saya</a>
+  </div>
+
+  <!-- Hero Section -->
+  <section id="beranda" class="min-h-screen hero-gradient relative flex items-center overflow-hidden">
+    <div id="particles" class="absolute inset-0 pointer-events-none"></div>
+    <div class="absolute top-20 right-10 w-64 h-64 rounded-full bg-[var(--accent)] opacity-5 blur-3xl"></div>
+    <div class="absolute bottom-20 left-10 w-96 h-96 rounded-full bg-[var(--accent)] opacity-5 blur-3xl"></div>
+
+    <div class="max-w-6xl mx-auto px-6 py-32 relative z-10">
+      <div class="max-w-3xl">
+        <p class="text-[var(--accent)] tracking-[0.3em] uppercase text-sm mb-4 reveal">Novelis Batak Toba</p>
+        <h1 class="font-display text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mb-6 reveal" style="transition-delay:0.1s;">
+          M. Tansiswo<br>Siagian
+        </h1>
+        <!--<p class="text-xl md:text-2xl text-[var(--muted)] mb-8 max-w-xl reveal" style="transition-delay:0.2s;">
+          Menelusuri lorong waktu dan ingatan melalui kata-kata yang hidup.
+        </p>-->
+        <a href="#buku" class="inline-flex items-center gap-3 bg-[var(--accent)] text-[var(--bg)] px-8 py-4 font-semibold rounded-lg transition-all duration-300 hover:bg-[var(--accent-dim)] hover:gap-5 reveal" style="transition-delay:0.3s;">
+          Lihat Karya
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+      <div class="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 w-80 text-right">
+        <span class="quote-mark">"</span>
+        <!--<p class="font-display text-xl italic text-[var(--muted)] -mt-16 pr-8">
+          Setiap buku adalah jendela menuju dunia yang belum pernah kita kunjungi.
+        </p>-->
+      </div>
+    </div>
+
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[var(--muted)]">
+      <span class="text-sm tracking-wider">Scroll</span>
+      <div class="w-px h-12 bg-gradient-to-b from-[var(--accent)] to-transparent scroll-indicator"></div>
+    </div>
+  </section>
+
+  <!-- Books Section -->
+  <section id="buku" class="py-24 md:py-32 relative">
+    <div class="absolute inset-0 bg-gradient-to-b from-[var(--bg-secondary)] to-[var(--bg)]"></div>
+    <div class="max-w-6xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-16">
+        <p class="text-[var(--accent)] tracking-[0.3em] uppercase text-sm mb-4 reveal">Koleksi Karya</p>
+        <h2 class="font-display text-4xl md:text-5xl font-bold reveal" style="transition-delay:0.1s;">Katalog Buku</h2>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-3 mb-12 reveal" style="transition-delay:0.2s;">
+        <button class="filter-btn active" data-filter="all">Semua</button>
+        <button class="filter-btn" data-filter="novel">Novel</button>
+        <!-- <button class="filter-btn" data-filter="kumpulan-cerita">Kumpulan Cerita</button> -->
+        <!-- <button class="filter-btn" data-filter="non-fiksi">Non-Fiksi</button> -->
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="booksGrid"></div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="tentang" class="py-24 md:py-32 relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-b from-[var(--bg)] via-[var(--bg-secondary)] to-[var(--bg)]"></div>
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[var(--accent)] opacity-5 blur-3xl"></div>
+
+    <div class="max-w-6xl mx-auto px-6 relative z-10">
+      <div class="grid lg:grid-cols-2 gap-16 items-start">
+        <div class="reveal">
+          <div class="relative inline-block">
+            <div class="w-64 h-64 md:w-80 md:h-80 rounded-2xl bg-gradient-to-br from-[var(--card)] to-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center relative overflow-hidden">
+              <img 
+                src="Profil.png"
+                alt="M. Tansiswo Siagian"
+                style="width:100%; height:100%; object-fit:cover; display:block;"
+              />
+              <div class="absolute inset-4 border border-[var(--accent)] opacity-30 rounded-xl"></div>
+            </div>
+            <div class="absolute -bottom-8 -right-8 w-32 h-32 bg-[var(--accent)] opacity-20 blur-2xl rounded-full"></div>
+          </div>
+          <div class="flex gap-4 mt-8">
+            <a href="#" class="social-icon" aria-label="Instagram">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+              </svg>
+            </a>
+            <a href="#" class="social-icon" aria-label="Whatsapp">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+              </svg>
+            </a>
+            <a href="#" class="social-icon" aria-label="Email">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[var(--accent)] tracking-[0.3em] uppercase text-sm mb-4 reveal">Tentang Saya</p>
+          <h2 class="font-display text-4xl md:text-5xl font-bold mb-6 reveal" style="transition-delay:0.1s;">Perjalanan Saya</h2>
+          <div class="space-y-4 text-[var(--muted)] mb-12 reveal" style="transition-delay:0.2s;">
+            <p>M. Tansiswo Siagian adalah penulis Indonesia yang telah menghasilkan berbagai karya sastra yang bermakna. Melalui tulisannya, ia mengajak pembaca untuk merenungkan nilai-nilai kehidupan, budaya, dan spiritualitas.</p>
+            <p>Karya-karyanya dikenal karena kedalaman tema dan kemampuannya menyentuh hati pembaca. Setiap buku yang ditulisnya merupakan perpaduan antara pengalaman pribadi, observasi sosial, dan imajinasi yang kaya.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="py-8 border-t border-[var(--border)]">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+      <p class="text-[var(--muted)] text-sm">2026 M. Tansiswo Siagian. Semua hak dilindungi.</p>
+      <p class="text-[var(--muted)] text-sm">Dibuat dengan dedikasi untuk para pembaca</p>
+    </div>
+  </footer>
+
+  <script>
+    const books = [
+      {
+        id: 1,
+        title: "Sortauli Putri Sang Pendeta",
+        year: 2024,
+        genre: "novel",
+        synopsis: "Sortauli gadis cantik, energik, pintar dan berpendidikan tinggi, punya kepribadian yang tangguh. Putri seorang pendeta, kakaknya juga istri pendeta, adiknya kelak pasti akan menjadi pendeta pula. Entah mengapa, ia tak tertarik jika didekati seorang pendeta. Sudah banyak pendeta mendekatinya, atau bahkan dijodoh kepadanya, mengapa ia tidak tertarik sedikitpun? Semua orang menilainya bodoh, sombong. Itu wajar sebab saat ini, banyak anak gadis yang berharap menjadi istri pendeta. Banyak orangtua yang punya anak gadis, berharap ada pendeta yang mendekati anak gadisnya. Bagi mereka menjadi istri pendeta adalah anugerah besar. Orangtuanya yang pendeta, menyimpulkan percuma ia berpendidikan tinggi. Hanya karena ia tidak mau menjadi istri pendeta. Mereka murka. Padahal sikapnya adalah sebuah hak asasi yang tidak bisa diganggu gugat siapapun. Tetapi ia bergeming, ia tetap ingat pengalamannya sejak kecil. la sudah rasakan sejak ia punya pikiran. la telah perhatikan dengan mata kepalanya sendiri. la fahami secara saksama dan mendalam. la punya penilaian tersendiri kepada mereka. Oh Sortauli, mengapa ia seperti itu, berbeda melihat kondisi dengan orang sekitarnya. Sementara orang lain begitu terpesona bagai terhipnotis pada yang ia anggap tidak lebih dari yang lainnya. Bahkan ia menganggap mereka terlalu banyak kepura puraan. Kau salah, Sortauli",
+        color: "#6B4423",
+        image: "C:/Users/Kiel/Downloads/Katalog Buku/Sortauli.jpeg",
+        buyLink: "https://tk.tokopedia.com/ZSuB73QN6/"
+      },
+      {
+        id: 2,
+        title: "Amangbao Parsinuan",
+        year: 2019,
+        genre: "novel",
+        synopsis: "Di awal pergaulan Rosinta pada pariban kandungnya Parulian, sudah diwanti-wanti bapaknya agar mereka jangan menikah. Menurut bapaknya, kawin dengan pariban begitu banyak resikonya. Baik secara kedokteran karena hubungan darah mereka cukup dekat. Resiko yg paling berat, jika oleh sesuatu hal misalnya akhirnya cerai. Bakal terjadi huru-hara antara yg bersaudara kandung. Dan kekwatiran itu pun tiba. Rosinta tidak juga hamil walau sudah lebih 2 tahun menikah dengan Parulian. Sementara Parulian adalah anak satu-satunya laki-laki dari orangtuanya. Terbesitlah sebuah rencana orangtua Parulian, agar anaknya kawin lagi sebab menganggap Rosinta tidak akan bisa punya anak. Lalu dengan kesadaran sendiri, Parulian dan Rosinta memeriksakan diri ke dokter ahli. Dan hasilnya, justru Parulian-lah yang mandul permanen. Hasil test itu direkayasa Rosinta seakan-akan Parulian sehat...... Entah dengan siapa Rosinta akhirnya hamil dan punya anak.... namun.... kehamilannya oleh siapakah....??? Mengapa harus demikian Rosinta, apa motivasinya dan apa pula akibatnya. Baca di novel Amangbao Parsinuan.",
+        color: "#2D5A4A",
+        image: "C:/Users/Kiel/Downloads/Katalog Buku/Amangbao.jpeg",
+        buyLink: "https://tk.tokopedia.com/ZSuBctEWc/"
+      }
+    ];
+
+    // ===== MODAL LOGIC =====
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalClose   = document.getElementById('modalClose');
+
+    function adjustColor(color, amount) {
+      const hex = color.replace('#', '');
+      const num = parseInt(hex, 16);
+      const r = Math.max(0, Math.min(255, (num >> 16) + amount));
+      const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount));
+      const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount));
+      return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+    }
+
+    function openModal(bookId) {
+      const book = books.find(b => b.id === bookId);
+      if (!book) return;
+
+      // Cover background
+      const cover = document.getElementById('modalCover');
+      cover.style.background = `linear-gradient(150deg, ${book.color} 0%, ${adjustColor(book.color, -40)} 60%, ${adjustColor(book.color, -60)} 100%)`;
+
+      // Cover image or fallback
+      const coverInner = document.getElementById('modalCoverInner');
+      if (book.image) {
+        coverInner.innerHTML = `
+          <img src="${book.image}" alt="Sampul ${book.title}"
+               style="width:100%;height:100%;object-fit:cover;display:block;"
+               onerror="this.style.display='none';">
+        `;
+      } else {
+        coverInner.innerHTML = `
+          <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.75rem;padding:1.5rem;text-align:center;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            <span class="font-display" style="font-size:1rem;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.5);line-height:1.3;">${book.title}</span>
+            <span style="color:rgba(255,255,255,0.5);font-size:0.75rem;">M. Tansiswo Siagian</span>
+          </div>
+        `;
+      }
+
+      // Badges
+      document.getElementById('modalYearBadge').textContent  = book.year;
+      document.getElementById('modalGenreBadge').textContent = book.genre.replace('-', ' ');
+
+      // Text
+      document.getElementById('modalGenreLabel').textContent = book.genre.replace('-', ' ');
+      document.getElementById('modalTitle').textContent      = book.title;
+      document.getElementById('modalSynopsis').textContent   = book.synopsis;
+
+      // Buy button
+      const buyBtn = document.getElementById('modalBuyBtn');
+      if (book.buyLink) {
+        buyBtn.href = book.buyLink;
+        buyBtn.classList.remove('disabled');
+        buyBtn.textContent = '';
+        buyBtn.innerHTML = `
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          Beli Buku
+        `;
+      } else {
+        buyBtn.removeAttribute('href');
+        buyBtn.classList.add('disabled');
+        buyBtn.textContent = 'Segera Tersedia';
+      }
+
+      // Show modal
+      modalOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // Close on overlay click (outside card)
+    modalOverlay.addEventListener('click', function(e) {
+      if (e.target === modalOverlay) closeModal();
+    });
+
+    modalClose.addEventListener('click', closeModal);
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ===== RENDER BOOKS =====
+    function renderBooks(filter = 'all') {
+      const grid = document.getElementById('booksGrid');
+      if (!grid) return;
+
+      const filtered = filter === 'all' ? books : books.filter(b => b.genre === filter);
+
+      grid.innerHTML = filtered.map((book, index) => `
+        <article class="book-card stagger-item" style="animation-delay:${index * 0.1}s;">
+          <div class="book-cover" style="background: linear-gradient(150deg, ${book.color} 0%, ${adjustColor(book.color, -40)} 60%, ${adjustColor(book.color, -60)} 100%);">
+            <div class="book-spine"></div>
+            ${book.image
+              ? `<img src="${book.image}" alt="Sampul ${book.title}" class="book-cover-img" onerror="this.style.display='none';">`
+              : ''
+            }
+            <div class="book-cover-fallback" ${book.image ? 'style="display:none;"' : ''} id="fallback-${book.id}">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+              <span class="font-display" style="font-size:0.95rem;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.5);line-height:1.3;">${book.title}</span>
+              <span style="color:rgba(255,255,255,0.5);font-size:0.7rem;">M. Tansiswo Siagian</span>
+            </div>
+            <span class="book-year-badge">${book.year}</span>
+            <span class="book-genre-badge">${book.genre.replace('-', ' ')}</span>
+          </div>
+
+          <div class="card-body">
+            <h3 class="font-display text-xl font-semibold mb-3 leading-tight">${book.title}</h3>
+            <p class="synopsis-text" id="syn-${book.id}">${book.synopsis.substring(0, 120)}…</p>
+
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;padding-top:1rem;border-top:1px solid var(--border);margin-top:auto;">
+              <button class="expand-btn" onclick="openModal(${book.id})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                Baca Selengkapnya
+              </button>
+              ${book.buyLink
+                ? `<a href="${book.buyLink}" class="buy-btn" target="_blank" rel="noopener noreferrer">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                    </svg>
+                    Beli Buku
+                  </a>`
+                : `<span class="buy-btn disabled">Segera Tersedia</span>`
+              }
+            </div>
+          </div>
+        </article>
+      `).join('');
+
+      // Show fallback if no image
+      filtered.forEach(book => {
+        if (!book.image) {
+          const fb = document.getElementById(`fallback-${book.id}`);
+          if (fb) fb.style.display = 'flex';
+        }
+      });
+
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          document.querySelectorAll('.stagger-item').forEach(el => el.classList.add('animate'));
+        }, 50);
+      });
+    }
+
+    // ===== FILTERS =====
+    function initFilters() {
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderBooks(btn.dataset.filter);
+        });
+      });
+    }
+
+    // ===== PARTICLES =====
+    function initParticles() {
+      const container = document.getElementById('particles');
+      if (!container) return;
+      for (let i = 0; i < 30; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = Math.random() * 4 + 2;
+        p.style.cssText = `
+          width:${size}px;height:${size}px;
+          left:${Math.random()*100}%;top:${Math.random()*100}%;
+          background:var(--accent);opacity:${Math.random()*0.3+0.1};
+          animation:float ${Math.random()*20+15}s ease-in-out ${Math.random()*10}s infinite;
+        `;
+        container.appendChild(p);
+      }
+    }
+
+    // ===== NAV =====
+    function initNav() {
+      const navbar = document.getElementById('navbar');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+          navbar.style.background = 'rgba(13,17,23,0.95)';
+          navbar.style.backdropFilter = 'blur(10px)';
+          navbar.style.borderBottom = '1px solid var(--border)';
+        } else {
+          navbar.style.background = 'transparent';
+          navbar.style.backdropFilter = 'none';
+          navbar.style.borderBottom = 'none';
+        }
+      });
+
+      const sections  = document.querySelectorAll('section');
+      const navLinks  = document.querySelectorAll('.nav-link');
+      window.addEventListener('scroll', () => {
+        let current = '';
+        sections.forEach(s => { if (window.scrollY >= s.offsetTop - 100) current = s.id; });
+        navLinks.forEach(l => {
+          l.classList.remove('active');
+          if (l.getAttribute('href') === `#${current}`) l.classList.add('active');
+        });
+      });
+    }
+
+    // ===== MOBILE MENU =====
+    function initMobileMenu() {
+      const hamburger  = document.getElementById('hamburger');
+      const mobileMenu = document.getElementById('mobileMenu');
+      hamburger.addEventListener('click', () => {
+        hamburger.classList.toggle('active');
+        mobileMenu.classList.toggle('active');
+        document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
+      });
+      mobileMenu.querySelectorAll('a').forEach(a => {
+        a.addEventListener('click', () => {
+          hamburger.classList.remove('active');
+          mobileMenu.classList.remove('active');
+          document.body.style.overflow = '';
+        });
+      });
+    }
+
+    // ===== SCROLL REVEAL =====
+    function initReveal() {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    }
+
+    // ===== INIT =====
+    document.addEventListener('DOMContentLoaded', () => {
+      initParticles();
+      renderBooks();
+      initFilters();
+      initMobileMenu();
+      initReveal();
+      initNav();
+    });
+  </script>
+</body>
+</html>
