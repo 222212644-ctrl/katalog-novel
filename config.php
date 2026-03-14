@@ -5,9 +5,9 @@
 // ============================================================
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'nama_database_anda');   // <-- ganti ini
-define('DB_USER', 'user_database_anda');   // <-- ganti ini
-define('DB_PASS', 'password_database_anda'); // <-- ganti ini
+define('DB_NAME', 'batt8713_bataktobaterkini');   // <-- ganti ini
+define('DB_USER', 'batt8713');   // <-- ganti ini
+define('DB_PASS', ''); // <-- ganti ini
 define('DB_CHARSET', 'utf8mb4');
 
 // Upload path

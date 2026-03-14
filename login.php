@@ -3,13 +3,19 @@
 // login.php — Autentikasi penulis (kredensial di backend saja)
 // Tidak menyimpan akun di database.
 // ============================================================
+// Deteksi HTTPS yang benar untuk LiteSpeed / hosting dengan proxy
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ($_SERVER['SERVER_PORT'] ?? 80) == 443
+        || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'
+        || ($_SERVER['HTTP_X_FORWARDED_SSL'] ?? '') === 'on';
+
 session_set_cookie_params([
     'lifetime' => 0,
     'path'     => '/',
     'domain'   => '',
-    'secure'   => isset($_SERVER['HTTPS']),
+    'secure'   => $isHttps,
     'httponly' => true,
-    'samesite' => 'Strict'
+    'samesite' => 'Lax',
 ]);
 session_start();
 
