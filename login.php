@@ -23,19 +23,7 @@ if (!empty($_SESSION['loggedin'])) {
 // Untuk mengganti password: ubah AUTHOR_PASSWORD, hapus credentials.php,
 // upload ulang — hash baru akan di-generate otomatis.
 const AUTHOR_USERNAME = 'tansiswo@siagian';
-const AUTHOR_PASSWORD = 'bataktobaterkini';
-const AUTHOR_PASS_HASH = '$2y$12$Qv16pkQ.DLAQTJ7P12JSxuLI4tV.rl9M2s7uN4xKm3RTE5sTaFSvm'; // hash bcrypt dari AUTHOR_PASSWORD
-
-// ── Bootstrap: generate & cache hash bcrypt di file lokal ──
-// credentials.php diblokir akses publik oleh .htaccess
-$credFile = __DIR__ . '/credentials.php';
-if (!file_exists($credFile)) {
-    $generatedHash = password_hash(AUTHOR_PASSWORD, PASSWORD_BCRYPT, ['cost' => 12]);
-    $phpContent    = "<?php\ndefine('CACHED_PASS_HASH', " . var_export($generatedHash, true) . ");\n";
-    file_put_contents($credFile, $phpContent, LOCK_EX);
-    @chmod($credFile, 0600);
-}
-require_once $credFile;
+define('CACHED_PASS_HASH', '$2y$12$LL239/tn/O8lUm3di04sROJelGxHWYeCexm.dln6FNKjZ3fRKe5j.');
 
 // ── Rate limiting via session ──
 if (!isset($_SESSION['login_attempts'])) {
